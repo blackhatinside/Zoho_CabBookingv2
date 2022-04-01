@@ -1,4 +1,5 @@
 /*
+
 The are 6 points(A,B,C,D,E,F) 15 KM apart 60 min travel between each, n taxis all taxis at A starting
 100 rs for first 5 KM and then 10 for each of the further KMs, rate from pickup to drop only
 pickup time example : 9 hrs, 15 hrs
