@@ -1,24 +1,15 @@
 /*
 
-The are 6 points(A,B,C,D,E,F) 15 KM apart 60 min travel between each, n taxis all taxis at A starting
-100 rs for first 5 KM and then 10 for each of the further KMs, rate from pickup to drop only
-pickup time example : 9 hrs, 15 hrs
+Total points : 6 (A,B,C,D,E,F) forming circular array, each 15 KM apart (distance can also vary if needed)
+no. of taxis : 4 (can scale if needed)
+taxis starting point: A (point 0)
+100 rs for first 5 KM and cumulative interest of 10 rs for every additional 5 kms
+pickup time - in hours only
 
 When a customer books a Taxi, a free taxi at that point is allocated
 -If no free taxi is available at that point, a free taxi at the nearest point is allocated.
 -If two taxis are free at the same point, one with lower earning is allocated
 -If no taxi is free at that time, booking is rejected
-
-
-Input 1:
-Customer ID: 1
-Pickup Point: A
-Drop Point: B
-Pickup Time: 9
-
-Output 1:
-Taxi can be allotted.
-Taxi-1 is allotted
 
 */
 
@@ -30,12 +21,19 @@ import java.util.Scanner;
 
 public class Booking {
 
+    static int totalCabs = 6;
+    static int n = totalCabs * 2;   // to make searching for nearest cab as O(n) time
+    static char[] cabList = new char[]{'A', 'B', 'C', 'D', 'E', 'F', 'A', 'B', 'C', 'D', 'E', 'F'};
+    //    stores the distance of all cities from point 0 in both f/w and b/w directions
+//    static int[] dist = new int[n];
+    static int[] dist = new int[]{0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165};
+
     public static void bookTaxi(int customerID, char pickupPoint, char dropPoint, int pickupTime, List<Driver> freeTaxis) {
         // to find nearest
         int min = 999;
 
         //distance between pickup and drop
-        int distanceBetweenPickUpAndDrop;   // 0
+        int distanceBetweenPickUpAndDrop = 0;   // 0
 
         //this trip earning
         int earning = 0;
@@ -52,35 +50,110 @@ public class Booking {
         //all details of current trip as string
         String tripDetail = "";
 
-        for (Driver t : freeTaxis) {
-            int distanceBetweenCustomerAndTaxi = Math.abs((t.currentSpot - '0') - (pickupPoint - '0')) * 15;
-            if (distanceBetweenCustomerAndTaxi < min) {
-                bookedDriver = t;
-                //distance between pickup and drop = (drop - pickup) * 15KM
-                distanceBetweenPickUpAndDrop = Math.abs((dropPoint - '0') - (pickupPoint - '0')) * 15;
-                //trip earning = 100 + (distanceBetweenPickUpAndDrop-5) * 10
-                earning = (distanceBetweenPickUpAndDrop - 5) * 10 + 100;
+        boolean loopFlag = true;
 
-                //drop time calculation
+        for (Driver t : freeTaxis) {
+            // A B C D E F
+            // distance between customer and taxi
+            int distanceBetweenCustomerAndTaxi = 1000;
+            loopFlag = true;
+            for (int i = 0; i < n && loopFlag; i++) {
+                if (cabList[i] == t.currentSpot) {
+                    int pathBeginsDistance = dist[i];
+                    for (int j = i; j < n; j++) {
+                        if (cabList[j] == pickupPoint) {
+                            int pathEndsDistance = dist[j];
+                            distanceBetweenCustomerAndTaxi = Math.min(pathEndsDistance - pathBeginsDistance, distanceBetweenCustomerAndTaxi);
+                            loopFlag = false;
+                            break;
+                        }
+                    }
+                }
+            }
+            loopFlag = true;
+            for (int i = 0; i < n && loopFlag; i++) {
+                if (cabList[i] == pickupPoint) {
+                    int pathBeginsDistance = dist[i];
+                    for (int j = i; j < n; j++) {
+                        if (cabList[j] == t.currentSpot) {
+                            int pathEndsDistance = dist[j];
+                            distanceBetweenCustomerAndTaxi = Math.min(pathEndsDistance - pathBeginsDistance, distanceBetweenCustomerAndTaxi);
+                            loopFlag = false;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (distanceBetweenCustomerAndTaxi < min) {
+
+                bookedDriver = t;
+                // distance between pickup and drop
+                distanceBetweenPickUpAndDrop = 1000;
+                loopFlag = true;
+                for (int i = 0; i < n && loopFlag; i++) {
+                    if (cabList[i] == dropPoint) {
+                        int pathBeginsDistance = dist[i];
+                        for (int j = i; j < n; j++) {
+                            if (cabList[j] == pickupPoint) {
+                                int pathEndsDistance = dist[j];
+                                distanceBetweenPickUpAndDrop = Math.min(pathEndsDistance - pathBeginsDistance, distanceBetweenPickUpAndDrop);
+                                loopFlag = false;
+                                break;
+                            }
+                        }
+                    }
+                }
+                loopFlag = true;
+                for (int i = 0; i < n && loopFlag; i++) {
+                    if (cabList[i] == pickupPoint) {
+                        int pathBeginsDistance = dist[i];
+                        for (int j = i; j < n; j++) {
+                            if (cabList[j] == dropPoint) {
+                                int pathEndsDistance = dist[j];
+                                distanceBetweenPickUpAndDrop = Math.min(pathEndsDistance - pathBeginsDistance, distanceBetweenPickUpAndDrop);
+                                loopFlag = false;
+                                break;
+                            }
+                        }
+                    }
+                }
+                // earning = 100 + cumulative((PickUp&Drop-5) * 10 @interestRate of $10 per 5kms)
+                earning = 100;
+                // System.out.println("Your Distance: " + distanceBetweenPickUpAndDrop);
+                int remainingDistance = distanceBetweenPickUpAndDrop - 5;
+                int currentCost = 100;
+                while (remainingDistance - 5 >= 0) {
+                    // System.out.println("Your Distance: " + remainingDistance + " " + earning);
+                    currentCost += 10;
+                    remainingDistance -= 5;
+                    earning += currentCost;
+                }
+                if (remainingDistance != 0) {
+                    earning += currentCost / remainingDistance;
+                }
+                // drop time calculation
                 int dropTime = pickupTime + distanceBetweenPickUpAndDrop / 15;
 
-                //when taxi will be free next
+                // when taxi will be free next
                 nextFreeTime = dropTime;
 
-                //taxi will be at drop point after trip
+                // taxi will be at drop point after trip
                 nextSpot = dropPoint;
 
                 // creating trip detail
-                tripDetail = customerID + "          " + pickupPoint + "      " + dropPoint + "       " + pickupTime + "          " + dropTime + "           " + earning;
+                tripDetail =
+                        customerID + "          " + pickupPoint + "      " + dropPoint + "       " + pickupTime + "  " +
+                                "        " + dropTime + "           " + earning + "           ";
                 min = distanceBetweenCustomerAndTaxi;
             }
 
         }
 
-        //setting corresponding details to allotted taxi
+        // setting corresponding details to allotted taxi
         assert bookedDriver != null;
         bookedDriver.setDetails(true, nextSpot, nextFreeTime, bookedDriver.totalEarnings + earning, tripDetail);
-        //BOOKED SUCCESSFULLY
+        // BOOKED SUCCESSFULLY
         System.out.println("Taxi " + bookedDriver.id + " booked");
 
     }
@@ -95,12 +168,50 @@ public class Booking {
         return taxis;
     }
 
+    public static List<Driver> putLeave(List<Driver> taxis, int id, String reason) {   // apply leave using Taxi ID
+//        for (int i = 0; i < taxis.size();)
+        taxis.get(id).onLeave = true;
+        taxis.get(id).reasonLeave = reason;
+        return taxis;
+    }
+
     public static List<Driver> getFreeTaxis(List<Driver> taxis, int pickupTime, char pickupPoint) {
         List<Driver> freeTaxis = new ArrayList<>();
         for (Driver t : taxis) {
             //taxi should be free
             //taxi should have enough time to reach customer before pickUpTime
-            if (t.freeTime <= pickupTime && (Math.abs((t.currentSpot - '0') - (pickupPoint - '0')) <= pickupTime - t.freeTime))
+            int distanceBetweenCurrentSpotAndPickup = 0;
+            boolean loopFlag;
+            loopFlag = true;
+            for (int i = 0; i < n && loopFlag; i++) {
+                if (cabList[i] == t.currentSpot) {
+                    int pathBeginsDistance = dist[i];
+                    for (int j = i; j < n; j++) {
+                        if (cabList[j] == pickupPoint) {
+                            int pathEndsDistance = dist[j];
+                            distanceBetweenCurrentSpotAndPickup = Math.min(pathEndsDistance - pathBeginsDistance, distanceBetweenCurrentSpotAndPickup);
+                            loopFlag = false;
+                            break;
+                        }
+                    }
+                }
+            }
+            loopFlag = true;
+            for (int i = 0; i < n && loopFlag; i++) {
+                if (cabList[i] == pickupPoint) {
+                    int pathBeginsDistance = dist[i];
+                    for (int j = i; j < n; j++) {
+                        if (cabList[j] == t.currentSpot) {
+                            int pathEndsDistance = dist[j];
+                            distanceBetweenCurrentSpotAndPickup = Math.min(pathEndsDistance - pathBeginsDistance, distanceBetweenCurrentSpotAndPickup);
+                            loopFlag = false;
+                            break;
+                        }
+                    }
+                }
+            }
+            System.out.println(t.id + ": " + t.onLeave);
+            if (t.freeTime <= pickupTime && (distanceBetweenCurrentSpotAndPickup <= pickupTime - t.freeTime && t.onLeave == false))
                 freeTaxis.add(t);
 
         }
@@ -133,11 +244,16 @@ public class Booking {
         List<Driver> taxis = createTaxis(n);
 
         Scanner scan = new Scanner(System.in);
+        Scanner scan2 = new Scanner(System.in);
+        scan2.useDelimiter("");
         int id = 1;
+        boolean loopFlag = true;
 
-        while (true) {
+        while (loopFlag) {
             System.out.println("0 - > Book Taxi");
             System.out.println("1 - > Print Taxi details");
+            System.out.println("2 - > Apply Leave");
+            System.out.println("3 - > Exit");
 //            int choice = s.nextInt();
             int choice;
             do {
@@ -148,18 +264,30 @@ public class Booking {
                 }
                 choice = scan.nextInt();
             } while (choice < 0);
-            System.out.println(choice == 0 ? "Booking Taxi" : choice == 1
-                    ? "Printing Taxi Details" : "Invalid Input");
+            System.out.println(
+                    choice == 0 ? "Booking Taxi" :
+                            choice == 1 ? "Printing Taxi Details" :
+                                    choice == 2 ? "Applying Leave" :
+                                            choice == 3 ? "Exiting..." :
+                                                    "Invalid Input");
             switch (choice) {
                 case 0: {
                     //get details from customers
 
                     //int customerID = id;
-                    System.out.println("Enter Pickup point");
+                    System.out.println("Choose a Pickup point (A - F):");
                     char pickupPoint = scan.next().charAt(0);
-                    System.out.println("Enter Drop point");
+                    if (!(pickupPoint >= 65 && pickupPoint <= 70)) {
+                        System.out.println("Invalid Pickup point!");
+                        break;
+                    }
+                    System.out.println("Enter Drop point (A - F): ");
                     char dropPoint = scan.next().charAt(0);
-                    System.out.println("Enter Pickup time");
+                    if (!(dropPoint >= 65 && dropPoint <= 70)) {
+                        System.out.println("Invalid Drop point!");
+                        break;
+                    }
+                    System.out.println("Enter Pickup time: ");
                     int pickupTime = scan.nextInt();
 
                     //check if pickup and drop points are valid
@@ -177,7 +305,7 @@ public class Booking {
                     }
                     //sort taxis based on earnings
                     freeTaxis.sort(Comparator.comparingInt(a -> a.totalEarnings));
-                    // 3,4,2 - > 2,3,4
+                    // 3,4,2 -> 2,3,4
 
                     //get free Taxi nearest to us
                     bookTaxi(id, pickupPoint, dropPoint, pickupTime, freeTaxis);
@@ -188,12 +316,26 @@ public class Booking {
                     //two functions to print details
                     for (Driver t : taxis)
                         t.printTaxiDetails();
-                    for (Driver t : taxis)
-                        t.printAllDetails();
+                    // for (Driver t : taxis)
+                        // t.printAllDetails();
                     break;
                 }
-                default:
-                    return;
+                case 2: {
+                    Login.driver_login(3);
+                    System.out.println("Enter your Cab ID: ");
+                    int taxiID = scan.nextInt();
+                    assert  (taxiID < 0 && taxiID >= n);
+                    System.out.println("Enter the reason: ");
+                    String reasonLeave = scan.nextLine();
+                    taxis = Booking.putLeave(taxis, taxiID, reasonLeave);
+                    break;
+                }
+                case 3: {
+                    loopFlag = false;
+                    break;
+                }
+                // default:
+                // return;
             }
         }
     }
