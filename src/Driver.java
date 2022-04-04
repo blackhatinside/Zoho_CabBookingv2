@@ -5,16 +5,19 @@ public class Driver {
 
     static int taxiCount = 0; // taxi number
     int id;
+    boolean onLeave = false;
     boolean booked; //taxi booked or not
     char currentSpot; //where taxi is now
     int freeTime; // when taxi becomes free
     int totalEarnings; // total earnings of taxi
+    String reasonLeave = ""; // reason for taking leave if any
     List<String> trips; // all details of all trips by this taxi
 
     public Driver() {
         booked = false;
         currentSpot = 'A';//start point A
-        freeTime = 6;//example 6 AM
+//        freeTime = 6; // initial available time of all Taxis
+        freeTime = 0; // initial available time of all Taxis
         totalEarnings = 0;
         trips = new ArrayList<>();
         taxiCount = taxiCount + 1; // everytime new taxi is created a new id will be assigned
