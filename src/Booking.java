@@ -13,6 +13,7 @@ When a customer books a Taxi, a free taxi at that point is allocated
 
 */
 
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -35,7 +36,7 @@ public class Booking {
         // todo: Connect to DB ----- DONE
         db = new Database();
         // static method call
-        db.clear();
+        db.clear(true);   // to empty the existing DB   true: clears DB
         // todo: Check if current user is admin or not  ----- DONE
         Login.admin_login(3);
         boolean isCurrentUserAdmin = Login.isAdmin;
@@ -96,7 +97,7 @@ public class Booking {
                         System.out.println("Invalid Drop point!");
                         break;
                     }
-                    System.out.println("Enter Pickup time: ");
+                    System.out.println("Enter Pickup time (in hours 0 - 23): ");
                     int pickupTime = scan.nextInt();
 
                     //check if pickup and drop points are valid
@@ -126,36 +127,54 @@ public class Booking {
                     //two functions to print details
                     for (Driver t : taxis)
                         t.printTaxiDetails();
-                    // for (Driver t : taxis)
-                    // t.printAllDetails();
+                    //for (Driver t : taxis)    // extra details
+                        //t.printAllDetails();  // extra details
                     break;
                 }
                 case 2: {
-                    Login.driver_login(3);
-                    System.out.println("Enter your Cab ID: ");
-                    int taxiID = scan.nextInt() - 1;
+                    int taxiID = 1;
+                    boolean loginFromFile = false;
+                    int loginStatus = Login.driver_login(3, loginFromFile);
+                    System.out.println("DEBUG Login Status: " + loginStatus);
+                    System.out.println("DEBUG Login from File: " + loginFromFile);
+                    if (loginStatus == -1) {
+                        break;
+                    }
+                    if (!loginFromFile) {
+                        taxiID = loginStatus;
+                    } else {
+                        System.out.println("Enter your Taxi ID: ");
+                        while (taxiID < 1 || taxiID > 4) {
+                            System.out.println("Enter ID (1 - 4): ");
+                            taxiID = scan.nextInt();
+                        }
+                    }
                     scan.nextLine();
-                    assert (taxiID < 0 && taxiID >= n);
+//                    assert (!(taxiID <= 0 && taxiID >= n));
                     System.out.println("Enter the reason: ");
                     String reasonLeave = scan.nextLine();
-                    taxis = Booking.putLeave(taxis, taxiID, reasonLeave);
+                    taxis = Booking.putLeave(taxis, taxiID - 1, reasonLeave);   // zero indexing
                     break;
                 }
                 case 3: {
-                    System.out.println("Enter taxi ID: ");
-                    int taxiID = scan.nextInt() - 1;
-                    if (taxiID < 1 && taxiID > n) {
-                        System.out.println("Invalid Taxi ID!");
-                        break;
-                    }
+                    System.out.println("Search any active taxi ID: ");
+                    int taxiID = 0;
+                    do {
+                        System.out.println("Enter ID (1 - 4): ");
+                        taxiID = scan.nextInt();
+                    } while (taxiID < 1 && taxiID > 4);
+                    scan.nextLine();
+//                    assert (!(taxiID <= 0 && taxiID >= n));
                     db.searchTaxi(taxiID);
-                }
-                case 4: {
-                    System.exit(0);
                     break;
                 }
-                // default:
-                // return;
+                default: {
+                    continue;
+                }
+                case 4: {
+                    loopFlag = false;
+                    break;
+                }
             }
         }
         db.getDisconnect();   // close database connection
@@ -183,7 +202,7 @@ public class Booking {
         //all details of current trip as string
         String tripDetail = "";
 
-        boolean loopFlag = true;
+        boolean loopFlag;
 
         for (Driver t : freeTaxis) {
             if (t.onLeave) {
@@ -296,13 +315,26 @@ public class Booking {
 
     public static List<Driver> createTaxis(int n) {
         List<Driver> taxis = new ArrayList<>();
+        // clear all previous leave applications
+        String userQuery0 = "TRUNCATE leaveapplications;";
+        String userQuery = "INSERT INTO leaveApplications (taxiID, reason) VALUES(?, ?);";
         // create taxis
         try {
+            PreparedStatement stmt = Database.getConnection().prepareStatement(userQuery0);
+            int rowsAffected = stmt.executeUpdate();
+            // System.out.println(rowsAffected + " ROWS AFFECTED");
+            stmt = Database.getConnection().prepareStatement(userQuery);;
             for (int i = 1; i <= n; i++) {
                 Driver t = new Driver();
+                stmt.setInt(1, i);
+                stmt.setString(2, "");
+                rowsAffected = stmt.executeUpdate();
+                // System.out.println(rowsAffected + "ROWS AFFECTED");
                 taxis.add(t);
             }
+            stmt.close();
         } catch (SQLException e) {
+            e.printStackTrace();
         }
         return taxis;
     }
@@ -311,6 +343,17 @@ public class Booking {
 //        for (int i = 0; i < taxis.size();)
         taxis.get(id).onLeave = true;
         taxis.get(id).reasonLeave = reason;
+
+        String userQuery = "UPDATE leaveapplications SET reason = ?;";
+        try {
+            PreparedStatement stmt = Database.getConnection().prepareStatement(userQuery);;
+            stmt.setString(1, reason);
+            int rowsAffected = stmt.executeUpdate();
+//            System.out.println(rowsAffected + " ROWS AFFECTED");
+            stmt.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
         return taxis;
     }
 
@@ -353,8 +396,8 @@ public class Booking {
                 }
             }
             System.out.println("Taxi " + t.id + " : " + (t.onLeave ? ("Absent: " + t.reasonLeave) : "Available"));
-            System.out.println("DEBUG: " + t.onLeave);
-            if ((t.freeTime <= pickupTime) && ((distanceBetweenCurrentSpotAndPickup <= pickupTime - t.freeTime) && (t.onLeave == false)))
+//            System.out.println("DEBUG: " + t.onLeave);
+            if ((t.freeTime <= pickupTime) && ((distanceBetweenCurrentSpotAndPickup <= pickupTime - t.freeTime) && (!t.onLeave)))
                 freeTaxis.add(t);
 
         }

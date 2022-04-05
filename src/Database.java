@@ -6,6 +6,7 @@ public class Database {
     private final static String DB_USERNAME = "postgres";
     private final static String DB_PASSWORD = "tswnciJ-";
     public static Connection CONNECTION = null;
+    public static ResultSet rs;
     PreparedStatement stmt;
 
     Database() {
@@ -23,20 +24,24 @@ public class Database {
         }
     }
 
-    public Connection getconnection() {
+    public static Connection getConnection() {
         return CONNECTION;
     }
 
-    void clear() {
+    void clear(boolean flag) {
         String truncate = "TRUNCATE bookingdetails;";
         String flush = "ALTER SEQUENCE bookingdetails_bookingid_seq RESTART WITH 1";
-        try {
-            stmt = CONNECTION.prepareStatement(truncate);
-            stmt.executeUpdate();
-            stmt = CONNECTION.prepareStatement(flush);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
+        if (flag) {
+            try {
+                stmt = CONNECTION.prepareStatement(truncate);
+                stmt.executeUpdate();
+                stmt = CONNECTION.prepareStatement(flush);
+                stmt.executeUpdate();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        } else {
+            return;
         }
     }
 
@@ -47,6 +52,28 @@ public class Database {
             e.printStackTrace();
         }
         return false;
+    }
+
+    public int validateUser(String driverUname, String driverPwd) {
+        Boolean ifUserExists;
+        int driverID = -1;
+        String userQuery = "SELECT taxiID FROM driverKeys WHERE name = ? AND password = crypt(?, password);";
+        try {
+            stmt = CONNECTION.prepareStatement(userQuery);
+            stmt.setString(1, driverUname);
+            stmt.setString(2, driverPwd);
+//            stmt.executeUpdate();
+            rs = stmt.executeQuery();
+            if (!rs.next()) {
+                System.out.println("User not found");
+                return driverID;
+            }
+            driverID = rs.getInt(1);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        System.out.println("Welcome back, " + driverUname);
+        return driverID;
     }
 
     public void getDisconnect() {
@@ -66,7 +93,7 @@ public class Database {
 //            }
             stmt = CONNECTION.prepareStatement("INSERT INTO bookingDetails VALUES (DEFAULT, ?, ?, ?, ?, ?);");
             stmt.setInt(1, id);     // taxiID
-            stmt.setBoolean(2, onLeave);     // taxi present/available
+            stmt.setBoolean(2, !onLeave);     // taxi present/available
             stmt.setString(3, booked ? "Unavailable" : "Available");   // current booking status
             stmt.setString(4, currentSpot + "");   // current location
             stmt.setInt(5, amount);   // amount earned
@@ -95,7 +122,6 @@ public class Database {
 
     public void searchTaxi(int taxiID) {
         try {
-            //      System.out.println("dssd");
             stmt = Database.CONNECTION.prepareStatement("SELECT * FROM bookingdetails WHERE taxiID = ?");
             stmt.setInt(1, taxiID); // 1 species the first param at index 1 in the preparedStatement
 

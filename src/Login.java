@@ -2,6 +2,7 @@ import java.util.HashMap;
 import java.util.Scanner;
 
 public class Login {
+
     public static boolean isAdmin = false;
     //    static Scanner scan = new Scanner(System.in);
     private static final Admin curr_admin = new Admin();
@@ -27,31 +28,36 @@ public class Login {
         }
     }
 
-    public static void driver_login(int maxAttempts) {
+    public static int driver_login(int maxAttempts, boolean loginFromFile) {
         Scanner scan = new Scanner(System.in);
         int login_attempts = 0;
         boolean isDriver = false;
+        int driverID = -1;
         String driverUsername = "", driverPassword = "";
         while (login_attempts++ < maxAttempts && (!isDriver)) {
             System.out.println("Enter your username: ");
             driverUsername = scan.nextLine();
             System.out.println("Enter your password: ");
             driverPassword = scan.nextLine();
-            HashMap<String, String> hp = FileUtils.HashMapFromTextFile();
-            isDriver = driverPassword.equals(hp.getOrDefault(driverUsername, ""));
-            if (isDriver) {
+            if (loginFromFile) {
+                HashMap<String, String> hp = FileUtils.HashMapFromTextFile();
+                isDriver = driverPassword.equals(hp.getOrDefault(driverUsername, ""));
+            } else {
+                Database db = new Database();
+                driverID = db.validateUser(driverUsername, driverPassword);
+            }
+            if (isDriver) {     // from file
                 System.out.println("Login Successful");
+                return 1;
+            } else if (driverID != -1) {    // from DB
+                System.out.println("Login Successful");
+                return driverID;
             } else {
                 System.out.println(3 - login_attempts + "attempts left.");
             }
 //             System.out.println(isSession);      // return value of the login block
         }
-        if (!isDriver) {
-            System.out.println("Max login attempts exceeded.");
-            // System.exit(1);
-            return;
-        } else {
-            System.out.println("Welcome Back " + driverUsername);
-        }
+        System.out.println("Max login attempts exceeded.");
+        return -1;
     }
 }

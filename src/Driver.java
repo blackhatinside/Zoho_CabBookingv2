@@ -1,8 +1,8 @@
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+//import java.sql.Connection;
+//import java.sql.PreparedStatement;
 
 public class Driver {
 
@@ -16,10 +16,9 @@ public class Driver {
     String reasonLeave = ""; // reason for taking leave if any
     List<String> trips; // all details of all trips by this taxi
 
-    private static PreparedStatement stmt = null;
-    Database db = new Database();
-    public Connection conn = Database.CONNECTION;
-    ;
+    // private static PreparedStatement stmt = null;
+    // Database db = new Database();
+    // public Connection conn = Database.getConnection();
 
     public Driver() throws SQLException {
         booked = false;
