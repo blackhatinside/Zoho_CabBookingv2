@@ -344,10 +344,11 @@ public class Booking {
         taxis.get(id).onLeave = true;
         taxis.get(id).reasonLeave = reason;
 
-        String userQuery = "UPDATE leaveapplications SET reason = ?;";
+        String userQuery = "UPDATE leaveapplications SET reason = ? WHERE taxiID = ?;";
         try {
-            PreparedStatement stmt = Database.getConnection().prepareStatement(userQuery);;
+            PreparedStatement stmt = Database.getConnection().prepareStatement(userQuery);
             stmt.setString(1, reason);
+            stmt.setInt(2,id + 1);
             int rowsAffected = stmt.executeUpdate();
 //            System.out.println(rowsAffected + " ROWS AFFECTED");
             stmt.close();
